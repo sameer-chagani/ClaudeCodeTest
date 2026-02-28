@@ -116,6 +116,7 @@ let scorePopups = [];  // floating score text
 
 const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false };
 const mouse = { x: W/2, y: H/2, clicked: false };
+let spaceShoot = false;
 
 // ============================================================
 // SECTION 4: LEVEL CONFIGURATION
@@ -272,9 +273,11 @@ function trySpawn(dt) {
 window.addEventListener('keydown', e => {
   if (e.key in keys) { keys[e.key] = true; e.preventDefault(); }
   if (e.key === ' ' || e.key === 'Enter') {
-    if (game.state === STATE.MENU)     startGame();
-    if (game.state === STATE.GAMEOVER) startGame();
-    if (game.state === STATE.LVLCOMPLETE) advanceLevel();
+    e.preventDefault();
+    if (game.state === STATE.MENU)         startGame();
+    if (game.state === STATE.GAMEOVER)     startGame();
+    if (game.state === STATE.LVLCOMPLETE)  advanceLevel();
+    if (game.state === STATE.PLAYING && e.key === ' ') spaceShoot = true;
   }
 });
 window.addEventListener('keyup', e => {
@@ -313,14 +316,18 @@ function updatePlayer(dt) {
   // Shoot cooldown
   player.shootTimer = Math.max(0, player.shootTimer - dt * 1000);
 
-  if (mouse.clicked && player.shootTimer === 0) {
+  if ((mouse.clicked || spaceShoot) && player.shootTimer === 0) {
     const gunTipX = player.x + Math.cos(player.angle) * (player.radius + 14);
     const gunTipY = player.y + Math.sin(player.angle) * (player.radius + 14);
+    const SPREAD = 0.18;
+    bullets.push(createBullet(gunTipX, gunTipY, player.angle - SPREAD));
     bullets.push(createBullet(gunTipX, gunTipY, player.angle));
+    bullets.push(createBullet(gunTipX, gunTipY, player.angle + SPREAD));
     muzzleFlash(gunTipX, gunTipY, player.angle);
     player.shootTimer = SHOOT_COOLDOWN;
   }
   mouse.clicked = false;
+  spaceShoot = false;
 
   // Leg animation
   if (player.isMoving) {
@@ -748,7 +755,7 @@ function drawMenu() {
   // Controls
   ctx.fillStyle = '#667788';
   ctx.font = '14px "Courier New", monospace';
-  ctx.fillText('MOVE: ARROW KEYS   AIM: MOUSE   SHOOT: CLICK', W/2, H/2 + 56);
+  ctx.fillText('MOVE: ARROW KEYS   AIM: MOUSE   SHOOT: CLICK / SPACE', W/2, H/2 + 56);
 
   // Hi-score
   ctx.fillStyle = PAL.ACCENT;
