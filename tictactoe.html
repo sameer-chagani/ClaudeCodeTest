@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      letter-spacing: 2px;
+      color: #e94560;
+    }
+
+    #status {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+      min-height: 1.5rem;
+      color: #a8dadc;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 110px);
+      grid-template-rows: repeat(3, 110px);
+      gap: 8px;
+    }
+
+    .cell {
+      background: #16213e;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      user-select: none;
+    }
+
+    .cell:hover:not(.taken) {
+      background: #0f3460;
+      transform: scale(1.05);
+    }
+
+    .cell.x { color: #e94560; }
+    .cell.o { color: #a8dadc; }
+
+    .cell.win {
+      background: #0f3460;
+      box-shadow: 0 0 16px rgba(233, 69, 96, 0.6);
+    }
+
+    #controls {
+      margin-top: 2rem;
+      display: flex;
+      gap: 1rem;
+    }
+
+    button {
+      padding: 0.6rem 1.6rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    button:hover { opacity: 0.85; }
+
+    #restart {
+      background: #e94560;
+      color: #fff;
+    }
+
+    #toggle-mode {
+      background: #0f3460;
+      color: #a8dadc;
+      border: 1px solid #a8dadc;
+    }
+
+    #score {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 2rem;
+      font-size: 1rem;
+      color: #aaa;
+    }
+
+    .score-box { text-align: center; }
+    .score-box span { display: block; font-size: 1.6rem; font-weight: bold; color: #eee; }
+
+    /* Modal */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    #modal-overlay.open { display: flex; }
+
+    #modal {
+      background: #16213e;
+      border-radius: 16px;
+      padding: 2rem;
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      border: 1px solid #0f3460;
+    }
+
+    #modal h2 {
+      font-size: 1.4rem;
+      color: #e94560;
+      text-align: center;
+    }
+
+    .name-field { display: flex; flex-direction: column; gap: 0.4rem; }
+    .name-field label { font-size: 0.9rem; color: #a8dadc; }
+
+    .name-field input {
+      padding: 0.5rem 0.8rem;
+      border-radius: 8px;
+      border: 1px solid #0f3460;
+      background: #1a1a2e;
+      color: #eee;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .name-field input:focus { border-color: #a8dadc; }
+
+    #modal-start {
+      background: #e94560;
+      color: #fff;
+      padding: 0.6rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    #modal-start:hover { opacity: 0.85; }
+  </style>
+</head>
+<body>
+  <!-- Name entry modal -->
+  <div id="modal-overlay">
+    <div id="modal">
+      <h2>Enter Player Names</h2>
+      <div class="name-field">
+        <label>Player X</label>
+        <input id="name-x" type="text" placeholder="Player X" maxlength="16">
+      </div>
+      <div class="name-field">
+        <label>Player O</label>
+        <input id="name-o" type="text" placeholder="Player O" maxlength="16">
+      </div>
+      <button id="modal-start">Start Game</button>
+    </div>
+  </div>
+
+  <h1>Tic Tac Toe</h1>
+  <div id="status">Player X's turn</div>
+  <div id="board"></div>
+  <div id="controls">
+    <button id="restart">Restart</button>
+    <button id="toggle-mode">vs CPU</button>
+  </div>
+  <div id="score">
+    <div class="score-box"><span id="label-x">X</span> <span id="score-x">0</span></div>
+    <div class="score-box">Draws <span id="score-d">0</span></div>
+    <div class="score-box"><span id="label-o">O</span> <span id="score-o">0</span></div>
+  </div>
+
+  <script>
+    const board = document.getElementById('board');
+    const status = document.getElementById('status');
+    const scoreX = document.getElementById('score-x');
+    const scoreO = document.getElementById('score-o');
+    const scoreD = document.getElementById('score-d');
+    const labelX = document.getElementById('label-x');
+    const labelO = document.getElementById('label-o');
+    const toggleBtn = document.getElementById('toggle-mode');
+    const modalOverlay = document.getElementById('modal-overlay');
+    const nameXInput = document.getElementById('name-x');
+    const nameOInput = document.getElementById('name-o');
+
+    let cells, state, current, gameOver;
+    let scores = { X: 0, O: 0, D: 0 };
+    let vsCP = false;
+    let names = { X: 'Player X', O: 'Player O' };
+
+    const WINS = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    function init() {
+      state = Array(9).fill('');
+      current = 'X';
+      gameOver = false;
+      board.innerHTML = '';
+      cells = [];
+
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.i = i;
+        cell.addEventListener('click', onCellClick);
+        board.appendChild(cell);
+        cells.push(cell);
+      }
+
+      status.textContent = `${names.X}'s turn`;
+    }
+
+    function onCellClick(e) {
+      const i = +e.target.dataset.i;
+      if (gameOver || state[i]) return;
+      play(i);
+      if (!gameOver && vsCP && current === 'O') {
+        setTimeout(cpuMove, 300);
+      }
+    }
+
+    function play(i) {
+      state[i] = current;
+      cells[i].textContent = current;
+      cells[i].classList.add(current.toLowerCase(), 'taken');
+
+      const win = checkWin();
+      if (win) {
+        win.forEach(idx => cells[idx].classList.add('win'));
+        status.textContent = `${names[current]} wins!`;
+        scores[current]++;
+        updateScore();
+        gameOver = true;
+        return;
+      }
+
+      if (state.every(s => s)) {
+        status.textContent = "It's a draw!";
+        scores.D++;
+        updateScore();
+        gameOver = true;
+        return;
+      }
+
+      current = current === 'X' ? 'O' : 'X';
+      const label = (vsCP && current === 'O') ? "CPU's turn" : `${names[current]}'s turn`;
+      status.textContent = label;
+    }
+
+    function checkWin() {
+      for (const line of WINS) {
+        const [a, b, c] = line;
+        if (state[a] && state[a] === state[b] && state[a] === state[c]) return line;
+      }
+      return null;
+    }
+
+    function cpuMove() {
+      // Minimax for perfect CPU play
+      const idx = bestMove();
+      play(idx);
+    }
+
+    function bestMove() {
+      let best = -Infinity, move = -1;
+      for (let i = 0; i < 9; i++) {
+        if (!state[i]) {
+          state[i] = 'O';
+          const score = minimax(state, 0, false);
+          state[i] = '';
+          if (score > best) { best = score; move = i; }
+        }
+      }
+      return move;
+    }
+
+    function minimax(s, depth, isMax) {
+      const win = checkWinFor(s);
+      if (win === 'O') return 10 - depth;
+      if (win === 'X') return depth - 10;
+      if (s.every(v => v)) return 0;
+
+      if (isMax) {
+        let best = -Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (!s[i]) {
+            s[i] = 'O';
+            best = Math.max(best, minimax(s, depth + 1, false));
+            s[i] = '';
+          }
+        }
+        return best;
+      } else {
+        let best = Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (!s[i]) {
+            s[i] = 'X';
+            best = Math.min(best, minimax(s, depth + 1, true));
+            s[i] = '';
+          }
+        }
+        return best;
+      }
+    }
+
+    function checkWinFor(s) {
+      for (const [a, b, c] of WINS) {
+        if (s[a] && s[a] === s[b] && s[a] === s[c]) return s[a];
+      }
+      return null;
+    }
+
+    function updateScore() {
+      scoreX.textContent = scores.X;
+      scoreO.textContent = scores.O;
+      scoreD.textContent = scores.D;
+    }
+
+    function updateLabels() {
+      labelX.textContent = names.X;
+      labelO.textContent = vsCP ? 'CPU' : names.O;
+    }
+
+    function openModal() {
+      nameXInput.value = '';
+      nameOInput.value = '';
+      modalOverlay.classList.add('open');
+      nameXInput.focus();
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove('open');
+    }
+
+    document.getElementById('modal-start').addEventListener('click', () => {
+      names.X = nameXInput.value.trim() || 'Player X';
+      names.O = nameOInput.value.trim() || 'Player O';
+      scores = { X: 0, O: 0, D: 0 };
+      updateScore();
+      updateLabels();
+      closeModal();
+      init();
+    });
+
+    // Allow pressing Enter in inputs to start
+    [nameXInput, nameOInput].forEach(input => {
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('modal-start').click();
+      });
+    });
+
+    document.getElementById('restart').addEventListener('click', init);
+
+    toggleBtn.addEventListener('click', () => {
+      vsCP = !vsCP;
+      toggleBtn.textContent = vsCP ? 'vs Human' : 'vs CPU';
+      scores = { X: 0, O: 0, D: 0 };
+      updateScore();
+      if (!vsCP) {
+        // Switching to vs Human — ask for names
+        openModal();
+      } else {
+        names.O = 'CPU';
+        updateLabels();
+        init();
+      }
+    });
+
+    // Start with name entry for vs Human (default mode)
+    openModal();
+  </script>
+</body>
+</html>
