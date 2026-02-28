@@ -12,12 +12,19 @@ open shooter.html
 
 ## Git Workflow
 
-After every set of changes: commit with a descriptive message and push to GitHub.
+**Every time work is completed, commit and push immediately.** This is mandatory — never leave finished work uncommitted. The goal is that GitHub always reflects the current working state of the project so nothing is ever lost.
+
+- Commit after each logical unit of work (a new feature, a bug fix, a content change)
+- Never batch multiple unrelated changes into one commit
+- Always push after committing — local-only commits are not safe enough
+- Write commit messages in the imperative, describing *what* the change does and *why* if non-obvious
+
 ```
 git add <files>
-git commit -m "..."
+git commit -m "Add shield power-up with 5s duration and visual ring indicator"
 git push
 ```
+
 Remote: `https://github.com/sameer-chagani/ClaudeCodeTest`
 
 ## Project Structure
