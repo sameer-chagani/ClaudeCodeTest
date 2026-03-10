@@ -90,12 +90,9 @@ def calculate_ratios(data):
     total_debt = safe_get(balance, "Total Debt", 0)
     cash = safe_get(balance, "Cash And Cash Equivalents", 0)
 
-    operating_cf = safe_get(cash_flow, "Operating Cash Flow", 0)
     capex = safe_get(cash_flow, "Capital Expenditure", 0)
     fcf = safe_get(cash_flow, "Free Cash Flow", 0)
 
-    shares_outstanding = info.get("sharesOutstanding")
-    current_price = info.get("currentPrice")
     market_cap = info.get("marketCap")
 
     ratios = {}
@@ -425,7 +422,7 @@ def display_ratios(ratios):
     print(f"  KEY FINANCIAL RATIOS")
     print(f"{'='*60}")
 
-    for key, r in ratios.items():
+    for _, r in ratios.items():
         val = r["value"]
         if val is None:
             formatted = "—"
@@ -445,7 +442,7 @@ def display_growth(growth):
     print(f"  GROWTH RATES (Year-over-Year)")
     print(f"{'='*60}")
 
-    for key, g in growth.items():
+    for _, g in growth.items():
         label = g["label"]
         yoy = g["yoy_rates"]
         cagr = g["cagr"]
