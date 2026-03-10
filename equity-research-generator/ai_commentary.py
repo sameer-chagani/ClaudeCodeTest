@@ -13,9 +13,25 @@ KEY CONCEPTS:
 - We feed it the calculated ratios/growth/DCF so it writes about real numbers
 """
 
-import anthropic
+import os
 
-from financial_analysis import pct, safe_divide
+try:
+    import anthropic
+    HAS_ANTHROPIC = True
+except ImportError:
+    HAS_ANTHROPIC = False
+
+from financial_analysis import pct
+
+
+def is_ai_available():
+    """
+    Checks if AI commentary can be generated.
+    Requires both the anthropic package AND an API key.
+    """
+    if not HAS_ANTHROPIC:
+        return False
+    return bool(os.environ.get("ANTHROPIC_API_KEY"))
 
 
 def build_financial_summary(data, ratios, growth, dcf):
@@ -124,7 +140,14 @@ def generate_commentary(data, ratios, growth, dcf):
     - valuation_analysis
     - risk_factors
     - investment_thesis
+
+    Returns None if the API is not available (missing key or package).
     """
+    if not is_ai_available():
+        print("\n  Skipping AI commentary (ANTHROPIC_API_KEY not set).")
+        print("  To enable, run: export ANTHROPIC_API_KEY='your-key-here'\n")
+        return None
+
     financial_summary = build_financial_summary(data, ratios, growth, dcf)
 
     user_prompt = f"""Based on the following financial data, write a professional equity research
@@ -273,4 +296,7 @@ if __name__ == "__main__":
     dcf = run_dcf(data)
 
     sections = generate_commentary(data, ratios, growth, dcf)
-    display_commentary(sections)
+    if sections:
+        display_commentary(sections)
+    else:
+        print("  AI commentary skipped. Report will not include analyst notes.")
