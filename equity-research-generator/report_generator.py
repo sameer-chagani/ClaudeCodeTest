@@ -39,23 +39,28 @@ def create_price_chart(data, output_path):
         return False
 
     fig, ax1 = plt.subplots(figsize=(8, 3.5))
+    fig.patch.set_facecolor("#FAFBFC")
+    ax1.set_facecolor("#FAFBFC")
 
-    # Price line
-    ax1.plot(price_history.index, price_history["Close"], color="#2196F3", linewidth=1.5)
-    ax1.set_ylabel("Price ($)", fontsize=9)
-    ax1.tick_params(axis="both", labelsize=8)
-    ax1.grid(True, alpha=0.3)
+    # Price line with gradient fill
+    ax1.plot(price_history.index, price_history["Close"], color="#1a56db", linewidth=2)
+    ax1.fill_between(price_history.index, price_history["Close"], alpha=0.08, color="#1a56db")
+    ax1.set_ylabel("Price ($)", fontsize=9, fontweight="bold", color="#333")
+    ax1.tick_params(axis="both", labelsize=8, colors="#555")
+    ax1.grid(True, alpha=0.2, linestyle="--")
+    ax1.spines["top"].set_visible(False)
 
     # Volume bars on secondary axis
     ax2 = ax1.twinx()
-    ax2.bar(price_history.index, price_history["Volume"], alpha=0.15, color="#9E9E9E", width=1)
-    ax2.set_ylabel("Volume", fontsize=9)
-    ax2.tick_params(axis="y", labelsize=7)
+    ax2.bar(price_history.index, price_history["Volume"], alpha=0.12, color="#94a3b8", width=1)
+    ax2.set_ylabel("Volume", fontsize=9, color="#888")
+    ax2.tick_params(axis="y", labelsize=7, colors="#888")
     ax2.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{x/1e6:.0f}M"))
+    ax2.spines["top"].set_visible(False)
 
-    plt.title(f"{data['ticker']} — 2-Year Price History", fontsize=11, fontweight="bold")
+    plt.title(f"{data['ticker']} - 2-Year Price History", fontsize=12, fontweight="bold", color="#1a1a2e", pad=12)
     fig.tight_layout()
-    fig.savefig(output_path, dpi=150, bbox_inches="tight")
+    fig.savefig(output_path, dpi=200, bbox_inches="tight", facecolor="#FAFBFC")
     plt.close(fig)
     return True
 
@@ -89,19 +94,25 @@ def create_revenue_profit_chart(data, output_path):
     width = 0.25
 
     fig, ax = plt.subplots(figsize=(8, 3.5))
-    ax.bar([i - width for i in x], revenue, width, label="Revenue", color="#2196F3")
-    ax.bar(x, gross_profit, width, label="Gross Profit", color="#4CAF50")
-    ax.bar([i + width for i in x], net_income, width, label="Net Income", color="#FF9800")
+    fig.patch.set_facecolor("#FAFBFC")
+    ax.set_facecolor("#FAFBFC")
 
-    ax.set_ylabel("$ Billions", fontsize=9)
+    ax.bar([i - width for i in x], revenue, width, label="Revenue", color="#1a56db", zorder=3)
+    ax.bar(x, gross_profit, width, label="Gross Profit", color="#059669", zorder=3)
+    ax.bar([i + width for i in x], net_income, width, label="Net Income", color="#d97706", zorder=3)
+
+    ax.set_ylabel("$ Billions", fontsize=9, fontweight="bold", color="#333")
     ax.set_xticks(x)
     ax.set_xticklabels(years, fontsize=9)
-    ax.legend(fontsize=8)
-    ax.grid(True, axis="y", alpha=0.3)
-    plt.title(f"{data['ticker']} — Revenue & Profitability", fontsize=11, fontweight="bold")
+    ax.legend(fontsize=8, framealpha=0.9, edgecolor="#ddd")
+    ax.grid(True, axis="y", alpha=0.2, linestyle="--", zorder=0)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(colors="#555")
+    plt.title(f"{data['ticker']} - Revenue & Profitability", fontsize=12, fontweight="bold", color="#1a1a2e", pad=12)
 
     fig.tight_layout()
-    fig.savefig(output_path, dpi=150, bbox_inches="tight")
+    fig.savefig(output_path, dpi=200, bbox_inches="tight", facecolor="#FAFBFC")
     plt.close(fig)
     return True
 
@@ -130,21 +141,26 @@ def create_margin_chart(ratios, output_path):
         return False
 
     fig, ax = plt.subplots(figsize=(8, 2.5))
-    colors = ["#2196F3" if v >= 0 else "#F44336" for v in values]
-    bars = ax.barh(labels, values, color=colors, height=0.5)
+    fig.patch.set_facecolor("#FAFBFC")
+    ax.set_facecolor("#FAFBFC")
+
+    colors = ["#1a56db" if v >= 0 else "#dc2626" for v in values]
+    bars = ax.barh(labels, values, color=colors, height=0.5, zorder=3)
 
     # Add value labels on bars
     for bar, val in zip(bars, values):
         ax.text(bar.get_width() + 0.5, bar.get_y() + bar.get_height() / 2,
-                f"{val:.1f}%", va="center", fontsize=8)
+                f"{val:.1f}%", va="center", fontsize=8, fontweight="bold", color="#333")
 
-    ax.set_xlabel("Percentage (%)", fontsize=9)
-    ax.tick_params(axis="both", labelsize=8)
-    ax.grid(True, axis="x", alpha=0.3)
-    plt.title("Profitability & Return Metrics", fontsize=11, fontweight="bold")
+    ax.set_xlabel("Percentage (%)", fontsize=9, fontweight="bold", color="#333")
+    ax.tick_params(axis="both", labelsize=8, colors="#555")
+    ax.grid(True, axis="x", alpha=0.2, linestyle="--", zorder=0)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    plt.title("Profitability & Return Metrics", fontsize=12, fontweight="bold", color="#1a1a2e", pad=12)
 
     fig.tight_layout()
-    fig.savefig(output_path, dpi=150, bbox_inches="tight")
+    fig.savefig(output_path, dpi=200, bbox_inches="tight", facecolor="#FAFBFC")
     plt.close(fig)
     return True
 
@@ -234,7 +250,7 @@ class ResearchReport(FPDF):
 
 # ---- REPORT BUILDER ----
 
-def generate_report(data, ratios, growth, dcf, commentary=None):
+def generate_report(data, ratios, growth, dcf, commentary=None, output_path=None):
     """
     Generates the full PDF report and saves it to disk.
 
@@ -244,6 +260,7 @@ def generate_report(data, ratios, growth, dcf, commentary=None):
         growth: Growth rates from calculate_growth_rates()
         dcf: DCF results from run_dcf()
         commentary: AI-generated sections (optional, can be None)
+        output_path: Where to save the PDF (optional, defaults to {ticker}_equity_research.pdf)
 
     Returns:
         The file path of the generated PDF.
@@ -257,19 +274,27 @@ def generate_report(data, ratios, growth, dcf, commentary=None):
     pdf.add_page()
 
     # ---- COVER / TITLE ----
-    pdf.set_font("Helvetica", "B", 22)
-    pdf.set_text_color(25, 25, 112)
-    pdf.cell(0, 15, company_name, align="C")
-    pdf.ln(12)
+    # Colored header bar
+    pdf.set_fill_color(25, 25, 112)
+    pdf.rect(10, pdf.get_y() - 2, 190, 50, "F")
 
-    pdf.set_font("Helvetica", "", 14)
-    pdf.set_text_color(100, 100, 100)
-    pdf.cell(0, 8, f"{ticker} | {info.get('sector', '')} | {info.get('industry', '')}", align="C")
-    pdf.ln(10)
+    pdf.set_font("Helvetica", "B", 26)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(0, 18, company_name, align="C")
+    pdf.ln(14)
 
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font("Helvetica", "", 13)
+    pdf.set_text_color(200, 210, 255)
+    pdf.cell(0, 8, f"{ticker}  |  {info.get('sector', '')}  |  {info.get('industry', '')}", align="C")
+    pdf.ln(8)
+
+    pdf.set_font("Helvetica", "I", 10)
+    pdf.set_text_color(180, 190, 220)
     pdf.cell(0, 6, "Equity Research Report", align="C")
-    pdf.ln(15)
+    pdf.ln(18)
+
+    # Reset text color
+    pdf.set_text_color(40, 40, 40)
 
     # ---- MARKET SNAPSHOT ----
     pdf.section_title("Market Snapshot")
@@ -460,7 +485,7 @@ def generate_report(data, ratios, growth, dcf, commentary=None):
         )
 
     # ---- SAVE ----
-    output_filename = f"{ticker}_equity_research.pdf"
+    output_filename = output_path or f"{ticker}_equity_research.pdf"
     pdf.output(output_filename)
     return output_filename
 

@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equity Research Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --navy: #0f1a2e;
+            --navy-light: #1a2942;
+            --navy-mid: #243554;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --green: #10b981;
+            --red: #ef4444;
+            --gold: #f59e0b;
+            --text: #e2e8f0;
+            --text-dim: #94a3b8;
+            --text-muted: #64748b;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --input-bg: #0f172a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--navy);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+            border-bottom: 1px solid var(--card-border);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: white;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-sub {
+            font-size: 12px;
+            color: var(--text-dim);
+            font-weight: 400;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        /* Search Section */
+        .search-section {
+            text-align: center;
+            padding: 48px 0 40px;
+        }
+
+        .search-section h1 {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+
+        .search-section p {
+            color: var(--text-dim);
+            font-size: 16px;
+            margin-bottom: 32px;
+        }
+
+        .search-box {
+            display: flex;
+            max-width: 520px;
+            margin: 0 auto;
+            gap: 12px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 14px 20px;
+            background: var(--input-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent);
+        }
+
+        .search-input::placeholder {
+            text-transform: none;
+            letter-spacing: 0;
+            color: var(--text-muted);
+        }
+
+        .search-btn {
+            padding: 14px 32px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        .search-btn:hover { background: var(--accent-hover); }
+        .search-btn:active { transform: scale(0.98); }
+        .search-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .ai-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 16px;
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+
+        .ai-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+        }
+
+        .ai-badge {
+            background: var(--navy-mid);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--gold);
+        }
+
+        .popular-tickers {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .ticker-chip {
+            padding: 6px 14px;
+            background: var(--navy-mid);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ticker-chip:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        /* Loading */
+        .loading-section {
+            display: none;
+            text-align: center;
+            padding: 60px 0;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--card-border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-text {
+            font-size: 16px;
+            color: var(--text-dim);
+        }
+
+        .progress-steps {
+            max-width: 400px;
+            margin: 24px auto 0;
+            text-align: left;
+        }
+
+        .progress-step {
+            padding: 8px 0;
+            font-size: 14px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-step.active { color: var(--accent); font-weight: 500; }
+        .progress-step.done { color: var(--green); }
+
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--card-border);
+            flex-shrink: 0;
+        }
+
+        .progress-step.active .step-dot {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+        }
+        .progress-step.done .step-dot { background: var(--green); }
+
+        /* Error */
+        .error-section {
+            display: none;
+            text-align: center;
+            padding: 48px 0;
+        }
+
+        .error-card {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .error-card h3 { color: var(--red); margin-bottom: 8px; }
+        .error-card p { color: var(--text-dim); font-size: 14px; }
+
+        .retry-btn {
+            margin-top: 16px;
+            padding: 10px 24px;
+            background: transparent;
+            border: 1px solid var(--card-border);
+            color: var(--text);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .retry-btn:hover { background: var(--navy-mid); }
+
+        /* Results */
+        .results-section {
+            display: none;
+        }
+
+        /* Company Header */
+        .company-header {
+            background: linear-gradient(135deg, var(--card-bg), var(--navy-mid));
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .company-info h2 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+        }
+
+        .company-meta {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .meta-tag {
+            background: var(--navy);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .price-block {
+            text-align: right;
+        }
+
+        .price-current {
+            font-size: 36px;
+            font-weight: 700;
+        }
+
+        .price-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .btn-download {
+            padding: 10px 24px;
+            background: var(--green);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .btn-download:hover { opacity: 0.9; }
+
+        .btn-new {
+            padding: 10px 24px;
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-new:hover { background: var(--navy-mid); }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 4px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover { color: var(--text); }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--accent);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        /* Stat Grid */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--navy);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        /* Ratio Table */
+        .ratio-group {
+            margin-bottom: 20px;
+        }
+
+        .ratio-group-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .ratio-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+            font-size: 14px;
+        }
+
+        .ratio-row:last-child { border-bottom: none; }
+
+        .ratio-label {
+            color: var(--text-dim);
+        }
+
+        .ratio-value {
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .ratio-row:hover {
+            background: rgba(59, 130, 246, 0.05);
+            margin: 0 -12px;
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+
+        /* Growth Table */
+        .growth-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .growth-table th {
+            text-align: left;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 12px;
+            border-bottom: 2px solid var(--card-border);
+        }
+
+        .growth-table td {
+            padding: 10px 12px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+        }
+
+        .growth-table tr:hover td { background: rgba(59, 130, 246, 0.05); }
+
+        .growth-metric { font-weight: 500; }
+        .growth-positive { color: var(--green); }
+        .growth-negative { color: var(--red); }
+
+        /* DCF Section */
+        .dcf-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .dcf-item {
+            background: var(--navy);
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .dcf-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .dcf-val {
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        .verdict-card {
+            background: linear-gradient(135deg, var(--navy), var(--navy-mid));
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .verdict-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .verdict-prices {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 16px 0;
+        }
+
+        .verdict-price-item span:first-child {
+            display: block;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .verdict-price-item span:last-child {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .verdict-upside {
+            font-size: 24px;
+            font-weight: 700;
+            padding: 8px 24px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .verdict-upside.positive { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+        .verdict-upside.negative { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+
+        /* Commentary */
+        .commentary-section {
+            margin-bottom: 20px;
+        }
+
+        .commentary-section h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .commentary-section p {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-dim);
+        }
+
+        .no-commentary {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .no-commentary p { margin-bottom: 8px; }
+
+        /* Chart containers */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 16px;
+        }
+
+        /* Projection table */
+        .proj-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 16px;
+        }
+
+        .proj-table th {
+            background: var(--navy-mid);
+            padding: 10px 14px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-dim);
+            text-align: right;
+        }
+
+        .proj-table th:first-child { text-align: center; border-radius: 8px 0 0 0; }
+        .proj-table th:last-child { border-radius: 0 8px 0 0; }
+
+        .proj-table td {
+            padding: 10px 14px;
+            font-size: 14px;
+            text-align: right;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .proj-table td:first-child {
+            text-align: center;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .proj-table tr:hover td { background: rgba(59, 130, 246, 0.05); }
+
+        .proj-table .terminal-row td {
+            font-weight: 600;
+            border-top: 2px solid var(--accent);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 32px 0;
+            color: var(--text-muted);
+            font-size: 12px;
+            border-top: 1px solid var(--card-border);
+            margin-top: 48px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .company-header { flex-direction: column; }
+            .price-block { text-align: left; }
+            .search-box { flex-direction: column; }
+            .search-btn { width: 100%; }
+            .stat-grid { grid-template-columns: repeat(2, 1fr); }
+            .verdict-prices { flex-direction: column; gap: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-inner">
+        <div class="logo">
+            <div class="logo-icon">ER</div>
+            <div>
+                <div class="logo-text">Equity Research</div>
+                <div class="logo-sub">Automated Financial Analysis</div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- SEARCH -->
+<div class="container">
+    <div id="searchSection" class="search-section">
+        <h1>Generate Equity Research</h1>
+        <p>Enter any stock ticker to generate a comprehensive financial analysis and PDF report</p>
+        <div class="search-box">
+            <input type="text" id="tickerInput" class="search-input" placeholder="Enter ticker (e.g. AAPL)"
+                   maxlength="5" autocomplete="off" spellcheck="false">
+            <button id="generateBtn" class="search-btn" onclick="startGeneration()">Generate Report</button>
+        </div>
+        <div class="ai-toggle">
+            <input type="checkbox" id="aiToggle" {% if ai_available %}checked{% endif %}>
+            <label for="aiToggle">Include AI Analyst Commentary</label>
+            <span class="ai-badge">Claude</span>
+            {% if not ai_available %}
+            <span style="color: var(--text-muted); font-size: 12px;">(API key not set)</span>
+            {% endif %}
+        </div>
+        <div class="popular-tickers">
+            <span class="ticker-chip" onclick="setTicker('AAPL')">AAPL</span>
+            <span class="ticker-chip" onclick="setTicker('MSFT')">MSFT</span>
+            <span class="ticker-chip" onclick="setTicker('GOOGL')">GOOGL</span>
+            <span class="ticker-chip" onclick="setTicker('AMZN')">AMZN</span>
+            <span class="ticker-chip" onclick="setTicker('TSLA')">TSLA</span>
+            <span class="ticker-chip" onclick="setTicker('NVDA')">NVDA</span>
+            <span class="ticker-chip" onclick="setTicker('JPM')">JPM</span>
+            <span class="ticker-chip" onclick="setTicker('META')">META</span>
+        </div>
+    </div>
+
+    <!-- LOADING -->
+    <div id="loadingSection" class="loading-section">
+        <div class="spinner"></div>
+        <div id="loadingText" class="loading-text">Initializing...</div>
+        <div class="progress-steps">
+            <div class="progress-step" id="step1"><span class="step-dot"></span> Fetching financial data</div>
+            <div class="progress-step" id="step2"><span class="step-dot"></span> Calculating ratios & growth</div>
+            <div class="progress-step" id="step3"><span class="step-dot"></span> Running DCF valuation</div>
+            <div class="progress-step" id="step4"><span class="step-dot"></span> Generating AI commentary</div>
+            <div class="progress-step" id="step5"><span class="step-dot"></span> Building PDF report</div>
+        </div>
+    </div>
+
+    <!-- ERROR -->
+    <div id="errorSection" class="error-section">
+        <div class="error-card">
+            <h3>Something went wrong</h3>
+            <p id="errorText"></p>
+            <button class="retry-btn" onclick="resetToSearch()">Try Again</button>
+        </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="resultsSection" class="results-section">
+        <!-- Company Header -->
+        <div class="company-header">
+            <div class="company-info">
+                <h2 id="companyName"></h2>
+                <div class="company-meta">
+                    <span class="meta-tag" id="tickerTag"></span>
+                    <span class="meta-tag" id="sectorTag"></span>
+                    <span class="meta-tag" id="industryTag"></span>
+                </div>
+            </div>
+            <div class="price-block">
+                <div class="price-label">Current Price</div>
+                <div class="price-current" id="currentPrice"></div>
+                <div class="action-buttons">
+                    <a id="downloadBtn" class="btn-download" href="#">Download PDF</a>
+                    <button class="btn-new" onclick="resetToSearch()">New Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Market Stats -->
+        <div class="stat-grid" id="statGrid"></div>
+
+        <!-- Tabs -->
+        <div class="tabs" id="tabNav">
+            <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+            <button class="tab-btn" onclick="switchTab('ratios')">Key Ratios</button>
+            <button class="tab-btn" onclick="switchTab('growth')">Growth</button>
+            <button class="tab-btn" onclick="switchTab('dcf')">DCF Valuation</button>
+            <button class="tab-btn" onclick="switchTab('commentary')">AI Commentary</button>
+        </div>
+
+        <!-- Tab: Overview -->
+        <div class="tab-content active" id="tab-overview">
+            <div class="card">
+                <div class="card-title">Stock Price History (2 Years)</div>
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Revenue & Profitability ($ Billions)</div>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Ratios -->
+        <div class="tab-content" id="tab-ratios">
+            <div class="card" id="ratiosCard"></div>
+        </div>
+
+        <!-- Tab: Growth -->
+        <div class="tab-content" id="tab-growth">
+            <div class="card" id="growthCard"></div>
+        </div>
+
+        <!-- Tab: DCF -->
+        <div class="tab-content" id="tab-dcf">
+            <div id="dcfContent"></div>
+        </div>
+
+        <!-- Tab: Commentary -->
+        <div class="tab-content" id="tab-commentary">
+            <div class="card" id="commentaryCard"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Equity Research Generator &mdash; Auto-generated reports for educational purposes only. Not investment advice.
+    </div>
+</div>
+
+<script>
+let currentJobId = null;
+let pollInterval = null;
+let priceChartInstance = null;
+let revenueChartInstance = null;
+
+// Enter key to submit
+document.getElementById('tickerInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startGeneration();
+});
+
+function setTicker(t) {
+    document.getElementById('tickerInput').value = t;
+    startGeneration();
+}
+
+function show(id) {
+    ['searchSection', 'loadingSection', 'errorSection', 'resultsSection'].forEach(s => {
+        document.getElementById(s).style.display = 'none';
+    });
+    document.getElementById(id).style.display = '';
+}
+
+function resetToSearch() {
+    show('searchSection');
+    document.getElementById('tickerInput').value = '';
+    document.getElementById('tickerInput').focus();
+    if (pollInterval) clearInterval(pollInterval);
+    // Reset progress steps
+    for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById('step' + i);
+        el.className = 'progress-step';
+    }
+}
+
+function updateProgressSteps(msg) {
+    const lower = msg.toLowerCase();
+    const steps = [
+        { id: 'step1', keywords: ['fetching'] },
+        { id: 'step2', keywords: ['ratio', 'growth'] },
+        { id: 'step3', keywords: ['dcf', 'valuation model'] },
+        { id: 'step4', keywords: ['ai', 'commentary'] },
+        { id: 'step5', keywords: ['pdf', 'building'] },
+    ];
+
+    let activeIdx = -1;
+    for (let i = 0; i < steps.length; i++) {
+        if (steps[i].keywords.some(k => lower.includes(k))) {
+            activeIdx = i;
+            break;
+        }
+    }
+
+    if (activeIdx >= 0) {
+        for (let i = 0; i < steps.length; i++) {
+            const el = document.getElementById(steps[i].id);
+            if (i < activeIdx) el.className = 'progress-step done';
+            else if (i === activeIdx) el.className = 'progress-step active';
+            else el.className = 'progress-step';
+        }
+    }
+}
+
+async function startGeneration() {
+    const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+    if (!ticker) return;
+
+    const includeAi = document.getElementById('aiToggle').checked;
+
+    show('loadingSection');
+    document.getElementById('loadingText').textContent = 'Starting analysis for ' + ticker + '...';
+    document.getElementById('generateBtn').disabled = true;
+
+    try {
+        const resp = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ticker, include_ai: includeAi }),
+        });
+
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+
+        currentJobId = data.job_id;
+        pollInterval = setInterval(pollStatus, 1000);
+    } catch (err) {
+        showError(err.message);
+    }
+}
+
+async function pollStatus() {
+    if (!currentJobId) return;
+
+    try {
+        const resp = await fetch('/api/status/' + currentJobId);
+        const data = await resp.json();
+
+        if (data.status === 'running') {
+            document.getElementById('loadingText').textContent = data.progress || 'Working...';
+            updateProgressSteps(data.progress || '');
+        } else if (data.status === 'complete') {
+            clearInterval(pollInterval);
+            document.getElementById('generateBtn').disabled = false;
+            renderResults(data.result);
+        } else if (data.status === 'error') {
+            clearInterval(pollInterval);
+            showError(data.error);
+        }
+    } catch (err) {
+        clearInterval(pollInterval);
+        showError('Lost connection to server');
+    }
+}
+
+function showError(msg) {
+    document.getElementById('generateBtn').disabled = false;
+    document.getElementById('errorText').textContent = msg;
+    show('errorSection');
+}
+
+function switchTab(name) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+}
+
+function renderResults(r) {
+    show('resultsSection');
+
+    // Company header
+    document.getElementById('companyName').textContent = r.company_name;
+    document.getElementById('tickerTag').textContent = r.ticker;
+    document.getElementById('sectorTag').textContent = r.sector;
+    document.getElementById('industryTag').textContent = r.industry;
+    document.getElementById('currentPrice').textContent = '$' + r.current_price;
+    document.getElementById('downloadBtn').href = r.pdf_url;
+
+    // Stat grid
+    const stats = [
+        { label: 'Market Cap', value: r.market_cap },
+        { label: '52-Week High', value: '$' + r.high_52w },
+        { label: '52-Week Low', value: '$' + r.low_52w },
+        { label: 'P/E (Trailing)', value: typeof r.pe_trailing === 'number' ? r.pe_trailing.toFixed(2) : r.pe_trailing },
+        { label: 'Dividend Yield', value: r.dividend_yield },
+    ];
+
+    const grid = document.getElementById('statGrid');
+    grid.innerHTML = stats.map(s => `
+        <div class="stat-card">
+            <div class="stat-label">${s.label}</div>
+            <div class="stat-value">${s.value}</div>
+        </div>
+    `).join('');
+
+    // Charts
+    renderPriceChart(r.price_data);
+    renderRevenueChart(r.revenue_data);
+
+    // Ratios
+    renderRatios(r.ratios);
+
+    // Growth
+    renderGrowth(r.growth);
+
+    // DCF
+    renderDCF(r.dcf);
+
+    // Commentary
+    renderCommentary(r.commentary);
+
+    // Switch to overview tab
+    switchTab('overview');
+}
+
+function renderPriceChart(data) {
+    if (priceChartInstance) priceChartInstance.destroy();
+    if (!data || !data.length) return;
+
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    priceChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.map(d => d.date),
+            datasets: [{
+                label: 'Close Price',
+                data: data.map(d => d.close),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 0,
+                pointHitRadius: 10,
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => '$' + ctx.parsed.y.toFixed(2)
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#64748b', maxTicksLimit: 8, font: { size: 11 } },
+                    grid: { color: 'rgba(51, 65, 85, 0.3)' }
+                },
+                y: {
+                    ticks: {
+                        color: '#64748b',
+                        font: { size: 11 },
+                        callback: v => '$' + v
+                    },
+                    grid: { color: 'rgba(51, 65, 85, 0.3)' }
+                }
+            }
+        }
+    });
+}
+
+function renderRevenueChart(data) {
+    if (revenueChartInstance) revenueChartInstance.destroy();
+    if (!data || !data.length) return;
+
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    revenueChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.year),
+            datasets: [
+                {
+                    label: 'Revenue',
+                    data: data.map(d => d.revenue),
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Gross Profit',
+                    data: data.map(d => d.gross_profit),
+                    backgroundColor: '#10b981',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Net Income',
+                    data: data.map(d => d.net_income),
+                    backgroundColor: '#f59e0b',
+                    borderRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#94a3b8', font: { size: 12 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + 'B'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#64748b', font: { size: 11 } },
+                    grid: { display: false }
+                },
+                y: {
+                    ticks: {
+                        color: '#64748b',
+                        font: { size: 11 },
+                        callback: v => '$' + v + 'B'
+                    },
+                    grid: { color: 'rgba(51, 65, 85, 0.3)' }
+                }
+            }
+        }
+    });
+}
+
+function renderRatios(ratios) {
+    const groups = {
+        'Valuation': ['pe_trailing', 'pe_forward', 'ev_ebitda', 'price_to_book', 'price_to_sales'],
+        'Profitability': ['gross_margin', 'operating_margin', 'net_margin', 'roe', 'roa'],
+        'Leverage': ['debt_to_equity', 'net_debt_to_ebitda', 'interest_coverage'],
+        'Cash Flow': ['fcf_yield', 'fcf_margin', 'capex_to_revenue'],
+    };
+
+    let html = '<div class="card-title">Key Financial Ratios</div>';
+
+    for (const [groupName, keys] of Object.entries(groups)) {
+        html += `<div class="ratio-group"><div class="ratio-group-title">${groupName}</div>`;
+        for (const key of keys) {
+            if (!ratios[key]) continue;
+            const r = ratios[key];
+            html += `<div class="ratio-row">
+                <span class="ratio-label" title="${r.description}">${r.label}</span>
+                <span class="ratio-value">${r.value}</span>
+            </div>`;
+        }
+        html += '</div>';
+    }
+
+    document.getElementById('ratiosCard').innerHTML = html;
+}
+
+function renderGrowth(growth) {
+    if (!growth || !Object.keys(growth).length) {
+        document.getElementById('growthCard').innerHTML = '<p class="no-commentary">No growth data available.</p>';
+        return;
+    }
+
+    let html = '<div class="card-title">Growth Rates</div>';
+    html += '<table class="growth-table"><thead><tr><th>Metric</th><th>YoY Rates</th><th>CAGR</th></tr></thead><tbody>';
+
+    for (const [key, g] of Object.entries(growth)) {
+        const cagrClass = g.cagr && !g.cagr.includes('—')
+            ? (parseFloat(g.cagr) >= 0 ? 'growth-positive' : 'growth-negative')
+            : '';
+        html += `<tr>
+            <td class="growth-metric">${g.label}</td>
+            <td>${g.yoy_rates.join(', ')}</td>
+            <td class="${cagrClass}" style="font-weight:600">${g.cagr}</td>
+        </tr>`;
+    }
+
+    html += '</tbody></table>';
+    document.getElementById('growthCard').innerHTML = html;
+}
+
+function renderDCF(dcf) {
+    const container = document.getElementById('dcfContent');
+
+    if (dcf.error) {
+        container.innerHTML = `<div class="card"><p>${dcf.error}</p></div>`;
+        return;
+    }
+
+    // Summary cards
+    let html = '<div class="dcf-summary">';
+    const items = [
+        { label: 'Base FCF', value: dcf.base_fcf },
+        { label: 'Growth Rate', value: dcf.estimated_growth },
+        { label: 'WACC', value: dcf.wacc },
+        { label: 'Terminal Growth', value: dcf.terminal_growth },
+        { label: 'Enterprise Value', value: dcf.enterprise_value },
+        { label: 'Equity Value', value: dcf.equity_value },
+    ];
+    items.forEach(i => {
+        html += `<div class="dcf-item"><div class="dcf-label">${i.label}</div><div class="dcf-val">${i.value}</div></div>`;
+    });
+    html += '</div>';
+
+    // Verdict card
+    const isPositive = dcf.upside_raw !== null && dcf.upside_raw >= 0;
+    const upsideClass = isPositive ? 'positive' : 'negative';
+    const upsideLabel = isPositive ? 'Upside' : 'Downside';
+
+    html += `<div class="verdict-card">
+        <div class="verdict-label">DCF Valuation Verdict</div>
+        <div class="verdict-prices">
+            <div class="verdict-price-item">
+                <span>Current Price</span>
+                <span>${dcf.current_price}</span>
+            </div>
+            <div class="verdict-price-item">
+                <span>Implied Price</span>
+                <span style="color: var(--accent)">${dcf.implied_price}</span>
+            </div>
+        </div>
+        <div class="verdict-upside ${upsideClass}">${upsideLabel}: ${dcf.upside}</div>
+    </div>`;
+
+    // Projection table
+    if (dcf.projected_fcf && dcf.projected_fcf.length) {
+        html += '<div class="card" style="margin-top:20px"><div class="card-title">Projected Free Cash Flows</div>';
+        html += '<table class="proj-table"><thead><tr><th>Year</th><th>Growth Rate</th><th>FCF</th><th>PV(FCF)</th></tr></thead><tbody>';
+        dcf.projected_fcf.forEach(p => {
+            html += `<tr><td>${p.year}</td><td>${p.growth_rate}</td><td>${p.fcf}</td><td>${p.pv}</td></tr>`;
+        });
+        html += `<tr class="terminal-row"><td colspan="2">Terminal Value</td><td>${dcf.terminal_value}</td><td>${dcf.pv_terminal}</td></tr>`;
+        html += '</tbody></table></div>';
+    }
+
+    container.innerHTML = html;
+}
+
+function renderCommentary(commentary) {
+    const card = document.getElementById('commentaryCard');
+
+    if (!commentary) {
+        card.innerHTML = `<div class="no-commentary">
+            <p style="font-size:16px; font-weight:500; margin-bottom:4px;">AI Commentary Not Available</p>
+            <p>Enable the AI toggle and set your ANTHROPIC_API_KEY to generate analyst commentary.</p>
+        </div>`;
+        return;
+    }
+
+    const sections = [
+        ['executive_summary', 'Executive Summary'],
+        ['financial_analysis', 'Financial Analysis'],
+        ['growth_assessment', 'Growth Assessment'],
+        ['valuation_analysis', 'Valuation Analysis'],
+        ['risk_factors', 'Risk Factors'],
+        ['investment_thesis', 'Investment Thesis'],
+    ];
+
+    let html = '<div class="card-title">AI Analyst Commentary</div>';
+    sections.forEach(([key, title]) => {
+        if (!commentary[key]) return;
+        const text = commentary[key].replace(/\n/g, '<br>');
+        html += `<div class="commentary-section"><h4>${title}</h4><p>${text}</p></div>`;
+    });
+
+    card.innerHTML = html;
+}
+</script>
+
+</body>
+</html>
