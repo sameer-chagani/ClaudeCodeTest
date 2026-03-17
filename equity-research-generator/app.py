@@ -229,5 +229,5 @@ def download_report(ticker):
 
 if __name__ == "__main__":
     print("\n  Equity Research Generator")
-    print("  Open http://localhost:5000 in your browser\n")
-    app.run(debug=True, port=5000)
+    print("  Open http://localhost:8000 in your browser\n")
+    app.run(debug=True, port=8000)
