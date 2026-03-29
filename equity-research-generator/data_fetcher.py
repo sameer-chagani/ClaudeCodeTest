@@ -6,19 +6,7 @@ for any publicly traded stock ticker.
 import math
 import time
 
-import requests
 import yfinance as yf
-
-
-def _create_session():
-    """Create a requests session with browser-like headers to avoid rate limiting."""
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                      "AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/120.0.0.0 Safari/537.36",
-    })
-    return session
 
 
 def fetch_company_data(ticker_symbol, retries=3):
@@ -32,14 +20,12 @@ def fetch_company_data(ticker_symbol, retries=3):
     Returns:
         Dictionary containing company info, financial statements, and price history.
     """
-    session = _create_session()
-
     for attempt in range(retries):
         try:
-            ticker = yf.Ticker(ticker_symbol, session=session)
+            ticker = yf.Ticker(ticker_symbol)
 
             info = ticker.info
-            if not info or info.get("trailingPegRatio") is None and not info.get("longName"):
+            if not info or not info.get("longName"):
                 raise ValueError(f"No data found for ticker '{ticker_symbol}'")
 
             income_stmt = ticker.financials
