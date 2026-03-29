@@ -4,26 +4,54 @@ for any publicly traded stock ticker.
 """
 
 import math
+import time
+
+import requests
 import yfinance as yf
 
 
-def fetch_company_data(ticker_symbol):
+def _create_session():
+    """Create a requests session with browser-like headers to avoid rate limiting."""
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/120.0.0.0 Safari/537.36",
+    })
+    return session
+
+
+def fetch_company_data(ticker_symbol, retries=3):
     """
     Fetches all financial data needed for the research report.
 
     Args:
         ticker_symbol: Stock ticker like "AAPL", "MSFT", "JPM"
+        retries: Number of retry attempts on failure
 
     Returns:
         Dictionary containing company info, financial statements, and price history.
     """
-    ticker = yf.Ticker(ticker_symbol)
+    session = _create_session()
 
-    info = ticker.info
-    income_stmt = ticker.financials
-    balance_sheet = ticker.balance_sheet
-    cash_flow = ticker.cashflow
-    price_history = ticker.history(period="2y")
+    for attempt in range(retries):
+        try:
+            ticker = yf.Ticker(ticker_symbol, session=session)
+
+            info = ticker.info
+            if not info or info.get("trailingPegRatio") is None and not info.get("longName"):
+                raise ValueError(f"No data found for ticker '{ticker_symbol}'")
+
+            income_stmt = ticker.financials
+            balance_sheet = ticker.balance_sheet
+            cash_flow = ticker.cashflow
+            price_history = ticker.history(period="2y")
+            break
+        except Exception as e:
+            if attempt < retries - 1:
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise RuntimeError(f"Failed to fetch data for {ticker_symbol}: {e}")
 
     return {
         "ticker": ticker_symbol.upper(),
