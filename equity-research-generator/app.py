@@ -1,44 +1,35 @@
 """
-WEB APP — Flask server for the Equity Research Report Generator.
-
-Provides a browser-based UI where users can:
-1. Enter a stock ticker
-2. See real-time progress as data is fetched and analyzed
-3. View results interactively (ratios, growth, DCF, charts)
-4. Download a professional PDF report
+Flask web server for the Equity Research Platform.
+Provides a browser-based interface for generating and viewing
+real-time equity research reports.
 """
 
 import json
 import os
-import queue
 import threading
-import time
 import uuid
+import math
 
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, jsonify, render_template, request
 
 from data_fetcher import fetch_company_data, format_number
 from financial_analysis import calculate_ratios, calculate_growth_rates, run_dcf, pct
-from ai_commentary import generate_commentary, is_ai_available
-from report_generator import generate_report
 
 app = Flask(__name__)
 
-# Store results keyed by job ID so the frontend can poll
 jobs = {}
 
 
 @app.route("/")
 def index():
-    return render_template("index.html", ai_available=is_ai_available())
+    return render_template("index.html")
 
 
 @app.route("/api/generate", methods=["POST"])
 def api_generate():
-    """Kick off report generation in a background thread, return a job ID."""
+    """Kick off report generation in a background thread."""
     body = request.get_json()
     ticker = body.get("ticker", "").strip().upper()
-    include_ai = body.get("include_ai", False)
 
     if not ticker or not ticker.isalpha() or len(ticker) > 5:
         return jsonify({"error": "Invalid ticker symbol"}), 400
@@ -48,11 +39,9 @@ def api_generate():
 
     def run():
         try:
-            # Step 1: Fetch data
-            jobs[job_id]["progress"] = "Fetching financial data from Yahoo Finance..."
+            jobs[job_id]["progress"] = "Fetching financial data..."
             data = fetch_company_data(ticker)
 
-            # Step 2: Analysis
             jobs[job_id]["progress"] = "Calculating financial ratios..."
             ratios = calculate_ratios(data)
 
@@ -61,19 +50,6 @@ def api_generate():
 
             jobs[job_id]["progress"] = "Running DCF valuation model..."
             dcf = run_dcf(data)
-
-            # Step 3: AI commentary (optional)
-            commentary = None
-            if include_ai and is_ai_available():
-                jobs[job_id]["progress"] = "Generating AI analyst commentary (this may take a minute)..."
-                commentary = generate_commentary(data, ratios, growth, dcf)
-
-            # Step 4: Generate PDF
-            jobs[job_id]["progress"] = "Building PDF report..."
-            report_dir = os.path.join(os.path.dirname(__file__), "static", "reports")
-            os.makedirs(report_dir, exist_ok=True)
-            output_path = os.path.join(report_dir, f"{ticker}_equity_research.pdf")
-            generate_report(data, ratios, growth, dcf, commentary, output_path=output_path)
 
             # Build result payload
             info = data["info"]
@@ -85,7 +61,7 @@ def api_generate():
             else:
                 cap_str = f"${market_cap/1e6:.2f}M"
 
-            # Format ratios for frontend
+            # Format ratios
             ratios_formatted = {}
             for key, r in ratios.items():
                 val = r["value"]
@@ -101,7 +77,7 @@ def api_generate():
                     "description": r.get("description", ""),
                 }
 
-            # Format growth for frontend
+            # Format growth
             growth_formatted = {}
             for key, g in growth.items():
                 growth_formatted[key] = {
@@ -110,7 +86,7 @@ def api_generate():
                     "cagr": pct(g["cagr"]),
                 }
 
-            # Format DCF for frontend
+            # Format DCF
             dcf_formatted = {}
             if "error" in dcf:
                 dcf_formatted["error"] = dcf["error"]
@@ -141,11 +117,11 @@ def api_generate():
                     "pv_terminal": format_number(dcf["pv_terminal"]),
                 }
 
-            # Price history for chart (sample to reduce payload)
+            # Price history for chart (sample every 3rd day)
             price_data = []
             ph = data["price_history"]
             if not ph.empty:
-                sampled = ph.iloc[::3]  # every 3rd day
+                sampled = ph.iloc[::3]
                 for date, row in sampled.iterrows():
                     price_data.append({
                         "date": date.strftime("%Y-%m-%d"),
@@ -157,17 +133,18 @@ def api_generate():
             revenue_data = []
             income = data["income_stmt"]
             if not income.empty:
-                import math as m
                 for col in income.columns:
                     year = col.strftime("%Y")
                     rev = income.loc["Total Revenue", col] if "Total Revenue" in income.index else 0
                     gp = income.loc["Gross Profit", col] if "Gross Profit" in income.index else 0
                     ni_key = "Net Income From Continuing Operation Net Minority Interest"
                     ni = income.loc[ni_key, col] if ni_key in income.index else 0
+
                     def clean(v):
-                        if v is None or (isinstance(v, float) and m.isnan(v)):
+                        if v is None or (isinstance(v, float) and math.isnan(v)):
                             return 0
                         return round(v / 1e9, 2)
+
                     revenue_data.append({
                         "year": year,
                         "revenue": clean(rev),
@@ -193,10 +170,8 @@ def api_generate():
                     "ratios": ratios_formatted,
                     "growth": growth_formatted,
                     "dcf": dcf_formatted,
-                    "commentary": commentary,
                     "price_data": price_data,
                     "revenue_data": revenue_data,
-                    "pdf_url": f"/download/{ticker}",
                 },
             }
         except Exception as e:
@@ -217,17 +192,7 @@ def api_status(job_id):
     return jsonify(job)
 
 
-@app.route("/download/<ticker>")
-def download_report(ticker):
-    """Serve the generated PDF."""
-    ticker = ticker.upper()
-    report_path = os.path.join(os.path.dirname(__file__), "static", "reports", f"{ticker}_equity_research.pdf")
-    if not os.path.exists(report_path):
-        return "Report not found", 404
-    return send_file(report_path, as_attachment=True, download_name=f"{ticker}_equity_research.pdf")
-
-
 if __name__ == "__main__":
-    print("\n  Equity Research Generator")
-    print("  Open http://localhost:8000 in your browser\n")
-    app.run(debug=True, port=8000)
+    print("\n  Equity Research Platform")
+    print("  Open http://127.0.0.1:8000 in your browser\n")
+    app.run(debug=True, host="0.0.0.0", port=8000)

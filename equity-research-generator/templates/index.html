@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Equity Research Generator</title>
+    <title>Equity Research Platform</title>
+    <meta name="description" content="Real-time equity research reports with financial analysis, ratio calculations, growth metrics, and DCF valuation models.">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
@@ -58,6 +59,8 @@
             align-items: center;
             gap: 12px;
             cursor: pointer;
+            text-decoration: none;
+            color: inherit;
         }
 
         .logo-icon {
@@ -76,6 +79,16 @@
         .logo-text { font-size: 18px; font-weight: 700; }
         .logo-sub { font-size: 11px; color: var(--text-dim); }
 
+        .header-links { display: flex; gap: 20px; align-items: center; }
+        .header-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .header-links a:hover { color: var(--text); }
+
         /* Container */
         .container {
             max-width: 1200px;
@@ -84,9 +97,11 @@
         }
 
         /* ============ SEARCH SECTION ============ */
-        #searchSection { text-align: center; padding: 60px 0 40px; }
-        #searchSection h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
-        #searchSection .subtitle { color: var(--text-dim); font-size: 15px; margin-bottom: 32px; }
+        #searchSection { text-align: center; padding: 80px 0 40px; }
+        #searchSection h1 { font-size: 36px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.5px; }
+        #searchSection .subtitle { color: var(--text-dim); font-size: 16px; margin-bottom: 12px; max-width: 520px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+        .tech-stack { color: var(--text-muted); font-size: 12px; margin-bottom: 36px; }
+        .tech-stack span { background: var(--navy-mid); padding: 3px 10px; border-radius: 4px; margin: 0 3px; font-weight: 500; }
 
         .search-box {
             display: flex;
@@ -125,43 +140,17 @@
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-primary { background: var(--accent); color: white; }
         .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
-        .btn-success { background: var(--green); color: white; }
-        .btn-success:hover { opacity: 0.9; }
         .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--card-border); }
         .btn-outline:hover { background: var(--navy-mid); }
 
-        .options-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            margin-top: 16px;
-            font-size: 14px;
-            color: var(--text-dim);
-        }
-
-        .options-row input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: var(--accent);
-        }
-
-        .ai-badge {
-            background: var(--navy-mid);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--gold);
-        }
-
         .popular-tickers {
-            margin-top: 24px;
+            margin-top: 28px;
             display: flex;
             justify-content: center;
             gap: 8px;
             flex-wrap: wrap;
         }
+        .popular-tickers .label { font-size: 12px; color: var(--text-muted); margin-right: 4px; line-height: 32px; }
 
         .ticker-chip {
             padding: 6px 16px;
@@ -175,6 +164,26 @@
             transition: all 0.2s;
         }
         .ticker-chip:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+        /* Features */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 48px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .feature-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: left;
+        }
+        .feature-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+        .feature-card p { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
 
         /* ============ LOADING SECTION ============ */
         #loadingSection { text-align: center; padding: 80px 0; }
@@ -314,9 +323,6 @@
         /* Chart */
         .chart-wrap { position: relative; height: 280px; }
 
-        /* Two-column layout */
-        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-
         /* Ratio table */
         .ratio-group { margin-bottom: 20px; }
         .ratio-group-title {
@@ -382,15 +388,6 @@
         .upside-badge.up { background: rgba(16,185,129,0.12); color: var(--green); }
         .upside-badge.down { background: rgba(239,68,68,0.12); color: var(--red); }
 
-        /* Commentary */
-        .commentary-block { margin-bottom: 20px; }
-        .commentary-block h4 {
-            font-size: 14px; font-weight: 600; color: var(--accent);
-            margin-bottom: 8px; padding-bottom: 6px;
-            border-bottom: 1px solid var(--card-border);
-        }
-        .commentary-block p { font-size: 13px; line-height: 1.7; color: var(--text-dim); }
-
         .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
         .empty-state p { margin-bottom: 4px; }
 
@@ -411,6 +408,8 @@
             text-align: center; padding: 24px 0; color: var(--text-muted);
             font-size: 11px; border-top: 1px solid var(--card-border); margin-top: 40px;
         }
+        .footer a { color: var(--text-dim); text-decoration: none; }
+        .footer a:hover { color: var(--text); }
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -419,8 +418,9 @@
             .search-box { flex-direction: column; }
             .btn { width: 100%; }
             .stat-row { grid-template-columns: repeat(2, 1fr); }
-            .two-col { grid-template-columns: 1fr; }
             .verdict-prices { flex-direction: column; gap: 8px; }
+            .features { grid-template-columns: 1fr; }
+            #searchSection h1 { font-size: 28px; }
         }
     </style>
 </head>
@@ -428,12 +428,15 @@
 
 <header>
     <div class="header-inner">
-        <div class="logo" onclick="resetToSearch()">
+        <a class="logo" onclick="resetToSearch()" href="#">
             <div class="logo-icon">ER</div>
             <div>
                 <div class="logo-text">Equity Research</div>
-                <div class="logo-sub">Automated Financial Analysis</div>
+                <div class="logo-sub">Financial Analysis Platform</div>
             </div>
+        </a>
+        <div class="header-links">
+            <a href="https://github.com/sameer-chagani" target="_blank">GitHub</a>
         </div>
     </div>
 </header>
@@ -442,24 +445,18 @@
 
     <!-- ========== SEARCH ========== -->
     <div id="searchSection">
-        <h1>Generate Equity Research</h1>
-        <p class="subtitle">Enter any stock ticker to generate a full financial analysis report</p>
+        <h1>Equity Research Platform</h1>
+        <p class="subtitle">Generate comprehensive equity research reports with real-time financial data, ratio analysis, growth metrics, and DCF valuation models</p>
+        <div class="tech-stack">
+            Built with <span>Python</span> <span>Flask</span> <span>yfinance</span> <span>Chart.js</span>
+        </div>
         <div class="search-box">
             <input type="text" id="tickerInput" class="search-input" placeholder="Enter ticker (e.g. AAPL)"
                    maxlength="5" autocomplete="off" spellcheck="false">
-            <button id="generateBtn" class="btn btn-primary" onclick="startGeneration()">Generate Report</button>
-        </div>
-        <div class="options-row">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                <input type="checkbox" id="aiToggle" {% if ai_available %}checked{% endif %}>
-                Include AI Commentary
-            </label>
-            <span class="ai-badge">Claude</span>
-            {% if not ai_available %}
-            <span style="font-size:11px;color:var(--text-muted)">(API key not set)</span>
-            {% endif %}
+            <button id="generateBtn" class="btn btn-primary" onclick="startGeneration()">Analyze</button>
         </div>
         <div class="popular-tickers">
+            <span class="label">Popular:</span>
             <span class="ticker-chip" onclick="quickTicker('AAPL')">AAPL</span>
             <span class="ticker-chip" onclick="quickTicker('MSFT')">MSFT</span>
             <span class="ticker-chip" onclick="quickTicker('GOOGL')">GOOGL</span>
@@ -468,6 +465,25 @@
             <span class="ticker-chip" onclick="quickTicker('NVDA')">NVDA</span>
             <span class="ticker-chip" onclick="quickTicker('JPM')">JPM</span>
             <span class="ticker-chip" onclick="quickTicker('META')">META</span>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <h4>Real-Time Data</h4>
+                <p>Fetches live financial data from Yahoo Finance including income statements, balance sheets, and cash flows</p>
+            </div>
+            <div class="feature-card">
+                <h4>Ratio Analysis</h4>
+                <p>Calculates 15+ key ratios across valuation, profitability, leverage, and cash flow categories</p>
+            </div>
+            <div class="feature-card">
+                <h4>Growth Metrics</h4>
+                <p>Computes year-over-year growth rates and CAGR for revenue, earnings, EBITDA, and free cash flow</p>
+            </div>
+            <div class="feature-card">
+                <h4>DCF Valuation</h4>
+                <p>Runs a 5-year discounted cash flow model with terminal value to derive an implied share price</p>
+            </div>
         </div>
     </div>
 
@@ -479,8 +495,7 @@
             <div class="progress-step" data-step="1"><span class="step-dot"></span> Fetching financial data</div>
             <div class="progress-step" data-step="2"><span class="step-dot"></span> Calculating ratios & growth</div>
             <div class="progress-step" data-step="3"><span class="step-dot"></span> Running DCF valuation</div>
-            <div class="progress-step" data-step="4"><span class="step-dot"></span> Generating AI commentary</div>
-            <div class="progress-step" data-step="5"><span class="step-dot"></span> Building PDF report</div>
+            <div class="progress-step" data-step="4"><span class="step-dot"></span> Building report</div>
         </div>
     </div>
 
@@ -510,7 +525,6 @@
                 <div class="price-label">Current Price</div>
                 <div class="price-value" id="rPrice"></div>
                 <div class="banner-actions">
-                    <a id="rDownloadBtn" class="btn btn-success" href="#" target="_blank">Download PDF</a>
                     <button class="btn btn-outline" onclick="resetToSearch()">New Report</button>
                 </div>
             </div>
@@ -527,7 +541,7 @@
     </div>
 
     <div class="footer">
-        Equity Research Generator &mdash; Auto-generated for educational purposes only. Not investment advice.
+        Equity Research Platform &mdash; Built by <a href="https://github.com/sameer-chagani" target="_blank">Sameer Chagani</a>
     </div>
 </div>
 
@@ -553,7 +567,6 @@ function resetToSearch() {
     document.getElementById('tickerInput').focus();
     document.getElementById('generateBtn').disabled = false;
     document.querySelectorAll('.progress-step').forEach(el => el.className = 'progress-step');
-    // Destroy charts
     Object.values(charts).forEach(c => c.destroy());
     charts = {};
 }
@@ -572,7 +585,6 @@ async function startGeneration() {
     const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
     if (!ticker) { document.getElementById('tickerInput').focus(); return; }
 
-    const includeAi = document.getElementById('aiToggle').checked;
     document.getElementById('generateBtn').disabled = true;
     showSection('loadingSection');
     document.getElementById('loadingText').textContent = 'Starting analysis for ' + ticker + '...';
@@ -581,7 +593,7 @@ async function startGeneration() {
         const resp = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ticker: ticker, include_ai: includeAi }),
+            body: JSON.stringify({ ticker: ticker }),
         });
         const data = await resp.json();
         if (data.error) throw new Error(data.error);
@@ -600,8 +612,7 @@ function setProgress(msg) {
         ['fetching'],
         ['ratio', 'growth', 'computing'],
         ['dcf', 'valuation model'],
-        ['ai', 'commentary'],
-        ['pdf', 'building'],
+        ['building', 'report'],
     ];
     let idx = -1;
     for (let i = 0; i < map.length; i++) {
@@ -631,7 +642,7 @@ async function pollStatus() {
         }
     } catch (e) {
         clearInterval(pollTimer); pollTimer = null;
-        showError('Lost connection to server. Make sure python3 app.py is running.');
+        showError('Lost connection to server.');
     }
 }
 
@@ -643,15 +654,12 @@ function showError(msg) {
 
 /* ====== RENDER RESULTS ====== */
 function renderResults(r) {
-    // Banner
     document.getElementById('rCompanyName').textContent = r.company_name;
     document.getElementById('rTicker').textContent = r.ticker;
     document.getElementById('rSector').textContent = r.sector;
     document.getElementById('rIndustry').textContent = r.industry;
     document.getElementById('rPrice').textContent = typeof r.current_price === 'number' ? '$' + r.current_price.toFixed(2) : '$' + r.current_price;
-    document.getElementById('rDownloadBtn').href = r.pdf_url;
 
-    // Stats
     const pe = typeof r.pe_trailing === 'number' ? r.pe_trailing.toFixed(2) : r.pe_trailing;
     const stats = [
         ['Market Cap', r.market_cap],
@@ -664,7 +672,6 @@ function renderResults(r) {
         `<div class="stat-card"><div class="label">${l}</div><div class="value">${v}</div></div>`
     ).join('');
 
-    // Build tabs
     const tabs = [
         { id: 'overview', label: 'Overview' },
         { id: 'financials', label: 'Financials' },
@@ -672,42 +679,26 @@ function renderResults(r) {
         { id: 'growth', label: 'Growth' },
         { id: 'dcf', label: 'DCF Valuation' },
     ];
-    if (r.commentary) tabs.push({ id: 'commentary', label: 'AI Commentary' });
 
     document.getElementById('rTabs').innerHTML = tabs.map((t, i) =>
         `<button class="tab-btn${i===0?' active':''}" onclick="switchTab('${t.id}')">${t.label}</button>`
     ).join('');
 
-    // Build panels
     let panels = '';
 
-    // --- Overview ---
     panels += `<div class="tab-panel active" id="panel-overview">
         <div class="card"><h3>Stock Price History (2 Years)</h3><div class="chart-wrap"><canvas id="chartPrice"></canvas></div></div>
         <div class="card"><h3>Revenue & Profitability ($ Billions)</h3><div class="chart-wrap"><canvas id="chartRevenue"></canvas></div></div>
     </div>`;
 
-    // --- Financials ---
     panels += `<div class="tab-panel" id="panel-financials">${buildFinancialsHTML(r)}</div>`;
-
-    // --- Ratios ---
     panels += `<div class="tab-panel" id="panel-ratios"><div class="card">${buildRatiosHTML(r.ratios)}</div></div>`;
-
-    // --- Growth ---
     panels += `<div class="tab-panel" id="panel-growth"><div class="card">${buildGrowthHTML(r.growth)}</div></div>`;
-
-    // --- DCF ---
     panels += `<div class="tab-panel" id="panel-dcf">${buildDCFHTML(r.dcf)}</div>`;
-
-    // --- Commentary ---
-    if (r.commentary) {
-        panels += `<div class="tab-panel" id="panel-commentary"><div class="card">${buildCommentaryHTML(r.commentary)}</div></div>`;
-    }
 
     document.getElementById('rPanels').innerHTML = panels;
     showSection('resultsSection');
 
-    // Render charts after DOM is ready
     requestAnimationFrame(() => {
         renderPriceChart(r.price_data);
         renderRevenueChart(r.revenue_data);
@@ -744,11 +735,9 @@ function buildFinancialsHTML(r) {
 
     html += '</tbody></table></div>';
 
-    // Margin chart
     html += '<div class="card"><h3>Profitability Margins</h3>';
     html += '<div class="chart-wrap"><canvas id="chartMargins"></canvas></div></div>';
 
-    // Render margin chart after insert
     requestAnimationFrame(() => renderMarginChart(r.ratios));
 
     return html;
@@ -795,7 +784,6 @@ function buildDCFHTML(dcf) {
 
     let html = '';
 
-    // Param cards
     const params = [
         ['Base FCF', dcf.base_fcf], ['Growth Rate', dcf.estimated_growth],
         ['WACC', dcf.wacc], ['Terminal Growth', dcf.terminal_growth],
@@ -805,7 +793,6 @@ function buildDCFHTML(dcf) {
     params.forEach(([l,v]) => html += `<div class="dcf-card"><div class="lbl">${l}</div><div class="val">${v}</div></div>`);
     html += '</div>';
 
-    // Verdict
     const up = dcf.upside_raw;
     const isUp = up !== null && up !== undefined && up >= 0;
     const badge = isUp ? 'up' : 'down';
@@ -819,7 +806,6 @@ function buildDCFHTML(dcf) {
         <div class="upside-badge ${badge}">${label}: ${dcf.upside}</div>
     </div>`;
 
-    // Projection table
     if (dcf.projected_fcf && dcf.projected_fcf.length) {
         html += '<div class="card"><h3>Projected Free Cash Flows</h3><table class="data-table"><thead><tr><th>Year</th><th class="r">Growth</th><th class="r">FCF</th><th class="r">PV(FCF)</th></tr></thead><tbody>';
         dcf.projected_fcf.forEach(p => {
@@ -829,24 +815,6 @@ function buildDCFHTML(dcf) {
         html += '</tbody></table></div>';
     }
 
-    return html;
-}
-
-function buildCommentaryHTML(c) {
-    if (!c) return '<div class="empty-state"><p>AI commentary not available.</p></div>';
-    const secs = [
-        ['executive_summary', 'Executive Summary'],
-        ['financial_analysis', 'Financial Analysis'],
-        ['growth_assessment', 'Growth Assessment'],
-        ['valuation_analysis', 'Valuation Analysis'],
-        ['risk_factors', 'Risk Factors'],
-        ['investment_thesis', 'Investment Thesis'],
-    ];
-    let html = '<h3>AI Analyst Commentary</h3>';
-    secs.forEach(([key, title]) => {
-        if (!c[key]) return;
-        html += `<div class="commentary-block"><h4>${title}</h4><p>${esc(c[key]).replace(/\n/g, '<br>')}</p></div>`;
-    });
     return html;
 }
 
