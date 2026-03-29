@@ -1,162 +1,183 @@
 """
-Data fetching module — pulls live financial data from Yahoo Finance
-for any publicly traded stock ticker.
+Data fetching module — pulls live financial data from
+Financial Modeling Prep API for any publicly traded stock ticker.
 """
 
 import math
 import os
-import json
-import time
-import hashlib
 from datetime import datetime, timedelta
 
-import yfinance as yf
+import requests
+import pandas as pd
 
-# Simple file-based cache to avoid repeated Yahoo Finance requests
-CACHE_DIR = os.path.join(os.path.dirname(__file__), ".cache")
-CACHE_TTL = 3600  # 1 hour
-
-
-def _cache_key(ticker_symbol):
-    return os.path.join(CACHE_DIR, f"{ticker_symbol.upper()}.json")
+FMP_BASE = "https://financialmodelingprep.com/stable"
+API_KEY = os.environ.get("FMP_API_KEY", "")
 
 
-def _get_cached(ticker_symbol):
-    """Return cached data if fresh enough, else None."""
-    path = _cache_key(ticker_symbol)
-    if not os.path.exists(path):
-        return None
-    try:
-        with open(path, "r") as f:
-            cached = json.load(f)
-        if time.time() - cached.get("_ts", 0) < CACHE_TTL:
-            return cached
-    except (json.JSONDecodeError, IOError):
-        pass
-    return None
+def _get(endpoint, params=None):
+    """Make a request to the FMP API."""
+    params = params or {}
+    params["apikey"] = API_KEY
+    url = f"{FMP_BASE}/{endpoint}"
+    resp = requests.get(url, params=params, timeout=15)
+    resp.raise_for_status()
+    data = resp.json()
+    if isinstance(data, dict) and "Error Message" in data:
+        raise ValueError(data["Error Message"])
+    return data
 
 
-def _set_cache(ticker_symbol, data):
-    """Save serializable data to cache."""
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    data["_ts"] = time.time()
-    path = _cache_key(ticker_symbol)
-    try:
-        with open(path, "w") as f:
-            json.dump(data, f)
-    except IOError:
-        pass
-
-
-def fetch_company_data(ticker_symbol, retries=3):
+def fetch_company_data(ticker_symbol):
     """
     Fetches all financial data needed for the research report.
 
     Args:
         ticker_symbol: Stock ticker like "AAPL", "MSFT", "JPM"
-        retries: Number of retry attempts on failure
 
     Returns:
-        Dictionary containing company info, financial statements, and price history.
+        Dictionary containing company profile, financial statements, and price history.
     """
-    import pandas as pd
-
     ticker_symbol = ticker_symbol.upper()
 
-    # Check cache first
-    cached = _get_cached(ticker_symbol)
-    if cached:
-        # Reconstruct DataFrames from cached dicts
-        return _deserialize(cached, ticker_symbol)
+    # Fetch all data from FMP
+    profile_list = _get("profile", {"symbol": ticker_symbol})
+    if not profile_list:
+        raise ValueError(f"No data found for ticker '{ticker_symbol}'")
+    profile = profile_list[0]
 
-    last_error = None
-    for attempt in range(retries):
-        try:
-            ticker = yf.Ticker(ticker_symbol)
+    income_data = _get("income-statement", {"symbol": ticker_symbol, "period": "annual", "limit": 4})
+    balance_data = _get("balance-sheet-statement", {"symbol": ticker_symbol, "period": "annual", "limit": 4})
+    cashflow_data = _get("cash-flow-statement", {"symbol": ticker_symbol, "period": "annual", "limit": 4})
 
-            info = ticker.info
-            if not info or not info.get("longName"):
-                raise ValueError(f"No data found for ticker '{ticker_symbol}'")
+    today = datetime.now().strftime("%Y-%m-%d")
+    two_years_ago = (datetime.now() - timedelta(days=730)).strftime("%Y-%m-%d")
+    price_data = _get("historical-price-eod/full", {"symbol": ticker_symbol, "from": two_years_ago, "to": today})
 
-            income_stmt = ticker.financials
-            balance_sheet = ticker.balance_sheet
-            cash_flow = ticker.cashflow
-            price_history = ticker.history(period="2y")
-
-            result = {
-                "ticker": ticker_symbol,
-                "info": info,
-                "income_stmt": income_stmt,
-                "balance_sheet": balance_sheet,
-                "cash_flow": cash_flow,
-                "price_history": price_history,
-            }
-
-            # Cache the result
-            _set_cache(ticker_symbol, _serialize(result))
-            return result
-
-        except Exception as e:
-            last_error = e
-            if attempt < retries - 1:
-                time.sleep(3 * (attempt + 1))
-                continue
-
-    raise RuntimeError(f"Failed to fetch data for {ticker_symbol}: {last_error}")
-
-
-def _serialize(data):
-    """Convert DataFrames to JSON-serializable dicts for caching."""
-    def df_to_dict(df):
-        if df is None or df.empty:
-            return None
-        d = df.copy()
-        d.columns = [str(c) for c in d.columns]
-        return d.to_dict()
-
-    ph = data["price_history"]
-    ph_dict = None
-    if ph is not None and not ph.empty:
-        ph_copy = ph.copy()
-        ph_copy.index = [str(i) for i in ph_copy.index]
-        ph_dict = ph_copy.to_dict()
-
-    return {
-        "ticker": data["ticker"],
-        "info": data["info"],
-        "income_stmt": df_to_dict(data["income_stmt"]),
-        "balance_sheet": df_to_dict(data["balance_sheet"]),
-        "cash_flow": df_to_dict(data["cash_flow"]),
-        "price_history": ph_dict,
-    }
-
-
-def _deserialize(cached, ticker_symbol):
-    """Reconstruct DataFrames from cached dicts."""
-    import pandas as pd
-
-    def dict_to_df(d):
-        if d is None:
-            return pd.DataFrame()
-        df = pd.DataFrame(d)
-        df.columns = [pd.Timestamp(c) for c in df.columns]
-        return df
-
-    ph_data = cached.get("price_history")
-    if ph_data:
-        ph = pd.DataFrame(ph_data)
-        ph.index = pd.to_datetime(ph.index)
+    # Build price history DataFrame
+    if price_data:
+        ph = pd.DataFrame(price_data)
+        ph["date"] = pd.to_datetime(ph["date"])
+        ph = ph.set_index("date").sort_index()
+        ph = ph.rename(columns={"close": "Close", "volume": "Volume", "open": "Open", "high": "High", "low": "Low"})
     else:
         ph = pd.DataFrame()
 
+    # Build info dict (matching the keys used by financial_analysis and app.py)
+    price_range = profile.get("range", "0-0")
+    range_parts = price_range.split("-")
+    low_52w = float(range_parts[0]) if len(range_parts) >= 2 else None
+    high_52w = float(range_parts[1]) if len(range_parts) >= 2 else None
+
+    shares_outstanding = None
+    if income_data:
+        shares_outstanding = income_data[0].get("weightedAverageShsOut")
+
+    # Compute trailing P/E
+    current_price = profile.get("price")
+    trailing_eps = income_data[0].get("eps") if income_data else None
+    trailing_pe = None
+    if current_price and trailing_eps and trailing_eps != 0:
+        trailing_pe = current_price / trailing_eps
+
+    # Compute forward P/E from forward EPS if available (use diluted EPS next year)
+    forward_pe = None
+
+    # Dividend yield
+    last_dividend = profile.get("lastDividend", 0) or 0
+    dividend_yield = None
+    if current_price and current_price > 0 and last_dividend > 0:
+        dividend_yield = last_dividend / current_price
+
+    info = {
+        "longName": profile.get("companyName", ticker_symbol),
+        "sector": profile.get("sector", "N/A"),
+        "industry": profile.get("industry", "N/A"),
+        "longBusinessSummary": profile.get("description", ""),
+        "marketCap": profile.get("marketCap", 0),
+        "currentPrice": current_price,
+        "fiftyTwoWeekHigh": high_52w,
+        "fiftyTwoWeekLow": low_52w,
+        "trailingPE": trailing_pe,
+        "forwardPE": forward_pe,
+        "dividendYield": dividend_yield,
+        "sharesOutstanding": shares_outstanding,
+        "enterpriseToEbitda": None,
+        "priceToBook": None,
+    }
+
+    # Compute EV/EBITDA and P/B from data
+    if income_data and balance_data:
+        ebitda = income_data[0].get("ebitda")
+        total_debt = balance_data[0].get("totalDebt", 0) or 0
+        cash = balance_data[0].get("cashAndCashEquivalents", 0) or 0
+        mc = profile.get("marketCap", 0) or 0
+        ev = mc + total_debt - cash
+        if ebitda and ebitda != 0:
+            info["enterpriseToEbitda"] = ev / ebitda
+
+        total_equity = balance_data[0].get("totalStockholdersEquity", 0)
+        if total_equity and shares_outstanding and shares_outstanding > 0:
+            book_per_share = total_equity / shares_outstanding
+            if book_per_share and book_per_share != 0 and current_price:
+                info["priceToBook"] = current_price / book_per_share
+
+    # Build financial statement DataFrames in the format financial_analysis expects
+    income_stmt = _build_statement_df(income_data, {
+        "revenue": "Total Revenue",
+        "grossProfit": "Gross Profit",
+        "operatingIncome": "Operating Income",
+        "netIncome": "Net Income From Continuing Operation Net Minority Interest",
+        "ebitda": "EBITDA",
+        "costOfRevenue": "Reconciled Cost Of Revenue",
+        "interestExpense": "Interest Expense",
+        "eps": "Basic EPS",
+    })
+
+    balance_sheet = _build_statement_df(balance_data, {
+        "totalAssets": "Total Assets",
+        "totalStockholdersEquity": "Stockholders Equity",
+        "totalDebt": "Total Debt",
+        "cashAndCashEquivalents": "Cash And Cash Equivalents",
+        "totalLiabilities": "Total Liabilities Net Minority Interest",
+    })
+
+    cash_flow = _build_statement_df(cashflow_data, {
+        "netCashProvidedByOperatingActivities": "Operating Cash Flow",
+        "investmentsInPropertyPlantAndEquipment": "Capital Expenditure",
+        "freeCashFlow": "Free Cash Flow",
+    })
+
     return {
         "ticker": ticker_symbol,
-        "info": cached["info"],
-        "income_stmt": dict_to_df(cached.get("income_stmt")),
-        "balance_sheet": dict_to_df(cached.get("balance_sheet")),
-        "cash_flow": dict_to_df(cached.get("cash_flow")),
+        "info": info,
+        "income_stmt": income_stmt,
+        "balance_sheet": balance_sheet,
+        "cash_flow": cash_flow,
         "price_history": ph,
     }
+
+
+def _build_statement_df(data_list, field_map):
+    """
+    Convert FMP API response list into a DataFrame matching the format
+    that financial_analysis.py expects (rows = metric names, columns = dates).
+    """
+    if not data_list:
+        return pd.DataFrame()
+
+    records = {}
+    dates = []
+    for item in data_list:
+        date = pd.Timestamp(item["date"])
+        dates.append(date)
+        for fmp_key, our_key in field_map.items():
+            if our_key not in records:
+                records[our_key] = []
+            records[our_key].append(item.get(fmp_key))
+
+    df = pd.DataFrame(records, index=dates).T
+    df.columns = dates
+    return df
 
 
 def display_summary(data):
@@ -262,7 +283,7 @@ def display_financial_statements(data):
         for val in row:
             if label == "EPS (Basic)":
                 if val is None or (isinstance(val, float) and math.isnan(val)):
-                    line += f"{'\u2014':>12s}"
+                    line += f"{chr(8212):>12s}"
                 else:
                     line += f"{'${:.2f}'.format(val):>12s}"
             else:
