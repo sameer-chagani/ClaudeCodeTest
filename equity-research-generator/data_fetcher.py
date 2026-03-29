@@ -4,9 +4,48 @@ for any publicly traded stock ticker.
 """
 
 import math
+import os
+import json
 import time
+import hashlib
+from datetime import datetime, timedelta
 
 import yfinance as yf
+
+# Simple file-based cache to avoid repeated Yahoo Finance requests
+CACHE_DIR = os.path.join(os.path.dirname(__file__), ".cache")
+CACHE_TTL = 3600  # 1 hour
+
+
+def _cache_key(ticker_symbol):
+    return os.path.join(CACHE_DIR, f"{ticker_symbol.upper()}.json")
+
+
+def _get_cached(ticker_symbol):
+    """Return cached data if fresh enough, else None."""
+    path = _cache_key(ticker_symbol)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r") as f:
+            cached = json.load(f)
+        if time.time() - cached.get("_ts", 0) < CACHE_TTL:
+            return cached
+    except (json.JSONDecodeError, IOError):
+        pass
+    return None
+
+
+def _set_cache(ticker_symbol, data):
+    """Save serializable data to cache."""
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    data["_ts"] = time.time()
+    path = _cache_key(ticker_symbol)
+    try:
+        with open(path, "w") as f:
+            json.dump(data, f)
+    except IOError:
+        pass
 
 
 def fetch_company_data(ticker_symbol, retries=3):
@@ -20,6 +59,17 @@ def fetch_company_data(ticker_symbol, retries=3):
     Returns:
         Dictionary containing company info, financial statements, and price history.
     """
+    import pandas as pd
+
+    ticker_symbol = ticker_symbol.upper()
+
+    # Check cache first
+    cached = _get_cached(ticker_symbol)
+    if cached:
+        # Reconstruct DataFrames from cached dicts
+        return _deserialize(cached, ticker_symbol)
+
+    last_error = None
     for attempt in range(retries):
         try:
             ticker = yf.Ticker(ticker_symbol)
@@ -32,20 +82,80 @@ def fetch_company_data(ticker_symbol, retries=3):
             balance_sheet = ticker.balance_sheet
             cash_flow = ticker.cashflow
             price_history = ticker.history(period="2y")
-            break
+
+            result = {
+                "ticker": ticker_symbol,
+                "info": info,
+                "income_stmt": income_stmt,
+                "balance_sheet": balance_sheet,
+                "cash_flow": cash_flow,
+                "price_history": price_history,
+            }
+
+            # Cache the result
+            _set_cache(ticker_symbol, _serialize(result))
+            return result
+
         except Exception as e:
+            last_error = e
             if attempt < retries - 1:
-                time.sleep(2 * (attempt + 1))
+                time.sleep(3 * (attempt + 1))
                 continue
-            raise RuntimeError(f"Failed to fetch data for {ticker_symbol}: {e}")
+
+    raise RuntimeError(f"Failed to fetch data for {ticker_symbol}: {last_error}")
+
+
+def _serialize(data):
+    """Convert DataFrames to JSON-serializable dicts for caching."""
+    def df_to_dict(df):
+        if df is None or df.empty:
+            return None
+        d = df.copy()
+        d.columns = [str(c) for c in d.columns]
+        return d.to_dict()
+
+    ph = data["price_history"]
+    ph_dict = None
+    if ph is not None and not ph.empty:
+        ph_copy = ph.copy()
+        ph_copy.index = [str(i) for i in ph_copy.index]
+        ph_dict = ph_copy.to_dict()
 
     return {
-        "ticker": ticker_symbol.upper(),
-        "info": info,
-        "income_stmt": income_stmt,
-        "balance_sheet": balance_sheet,
-        "cash_flow": cash_flow,
-        "price_history": price_history,
+        "ticker": data["ticker"],
+        "info": data["info"],
+        "income_stmt": df_to_dict(data["income_stmt"]),
+        "balance_sheet": df_to_dict(data["balance_sheet"]),
+        "cash_flow": df_to_dict(data["cash_flow"]),
+        "price_history": ph_dict,
+    }
+
+
+def _deserialize(cached, ticker_symbol):
+    """Reconstruct DataFrames from cached dicts."""
+    import pandas as pd
+
+    def dict_to_df(d):
+        if d is None:
+            return pd.DataFrame()
+        df = pd.DataFrame(d)
+        df.columns = [pd.Timestamp(c) for c in df.columns]
+        return df
+
+    ph_data = cached.get("price_history")
+    if ph_data:
+        ph = pd.DataFrame(ph_data)
+        ph.index = pd.to_datetime(ph.index)
+    else:
+        ph = pd.DataFrame()
+
+    return {
+        "ticker": ticker_symbol,
+        "info": cached["info"],
+        "income_stmt": dict_to_df(cached.get("income_stmt")),
+        "balance_sheet": dict_to_df(cached.get("balance_sheet")),
+        "cash_flow": dict_to_df(cached.get("cash_flow")),
+        "price_history": ph,
     }
 
 
